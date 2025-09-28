@@ -4,17 +4,9 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
-// Disable prepared statements explicitly in production
-const prismaOptions = {
-  errorFormat: 'minimal',
-  __internal: {
-    engine: {
-      enablePreparedStatements: false,
-    },
-  },
-};
-
-export const prisma = global.prisma ?? new PrismaClient(prismaOptions);
+// Only create one Prisma client instance
+// in development to avoid multiple prepared statements
+export const prisma = global.prisma ?? new PrismaClient();
 
 if (process.env.NODE_ENV !== 'production') {
   global.prisma = prisma;
