@@ -13,11 +13,10 @@ export async function GET() {
       orderBy: { created_at: 'desc' },
     });
 
-    // Format niche tags for frontend
-    const formatted = reflections.map((r) => ({
-      ...r,
-      niche_tags: r.reflectionNicheTags.map((t) => t.nicheTag),
-    }));
+   const formatted = reflections.map((r: any) => ({
+  ...r,
+  niche_tags: r.reflectionNicheTags.map((t: any) => t.nicheTag),
+}));
 
     return NextResponse.json(formatted);
   } catch (error) {

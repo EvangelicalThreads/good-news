@@ -12,7 +12,7 @@ export async function GET() {
       orderBy: { created_at: 'desc' },
     });
 
-    const data = comments.map((c) => ({
+   const data = comments.map((c: any) => ({
       id: c.id,
       comment: c.comment, // ✅ use 'comment' column
       created_at: c.created_at,
