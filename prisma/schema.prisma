@@ -1,0 +1,252 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                String                @unique(map: "email_unique")
+  name                 String?
+  password             String
+  emailOptIn           Boolean?              @default(false) @map("emailoptin")
+  streak               Int                   @default(0)
+  streak_last_date     DateTime?             @db.Timestamptz(6)
+  avatar               String?
+  devotional_goal_id   String?               @db.Uuid
+  is_admin             Boolean?              @default(false)
+  AiPlan               AiPlan[]              @relation("UserAiPlans")
+  dailyTaskCompletions DailyTaskCompletion[]
+  dailyTasks           DailyTask[]
+  journals             Journal[]             @relation("UserJournals")
+  likes                Like[]                @relation("UserLikes")
+  reflectionComments   ReflectionComment[]   @relation("UserReflectionComments")
+  reflectionLikes      ReflectionLike[]      @relation("UserReflectionLikes")
+  reflections          Reflection[]          @relation("UserReflections")
+  UserAiTaskProgress   UserAiTaskProgress[]  @relation("UserAiTaskProgresses")
+  user_task_progress   UserTaskProgress[]
+  devotionalGoal       DevotionalGoal?       @relation("UserDevotionalGoal", fields: [devotional_goal_id], references: [id], onUpdate: NoAction, map: "fk_user_devotional_goal")
+
+  @@map("users")
+}
+
+model Reflection {
+  id                  String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id             String               @db.Uuid
+  text                String
+  mood                String?
+  created_at          DateTime?            @default(now()) @db.Timestamptz(6)
+  status              String?              @default("pending")
+  likes               Like[]               @relation("ReflectionLikes")
+  reflectionComments  ReflectionComment[]  @relation("ReflectionComments")
+  reflectionLikes     ReflectionLike[]     @relation("ReflectionLikesRL")
+  reflectionNicheTags ReflectionNicheTag[]
+  user                User                 @relation("UserReflections", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_reflection")
+
+  @@map("reflections")
+}
+
+model Like {
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reflection_id String     @db.Uuid
+  user_id       String     @db.Uuid
+  created_at    DateTime?  @default(now()) @db.Timestamptz(6)
+  reflection    Reflection @relation("ReflectionLikes", fields: [reflection_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_like_reflection")
+  user          User       @relation("UserLikes", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_like_user")
+
+  @@unique([reflection_id, user_id], map: "likes_unique")
+  @@map("likes")
+}
+
+model ReflectionComment {
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reflection_id String     @db.Uuid
+  user_id       String     @db.Uuid
+  comment       String
+  created_at    DateTime?  @default(now()) @db.Timestamptz(6)
+  status        String?    @default("pending")
+  reflection    Reflection @relation("ReflectionComments", fields: [reflection_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_comment_reflection")
+  user          User       @relation("UserReflectionComments", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_comment_user")
+
+  @@map("reflection_comments")
+}
+
+model ReflectionLike {
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reflection_id String     @db.Uuid
+  user_id       String     @db.Uuid
+  created_at    DateTime?  @default(now()) @db.Timestamptz(6)
+  reflection    Reflection @relation("ReflectionLikesRL", fields: [reflection_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_reflectionlike_reflection")
+  user          User       @relation("UserReflectionLikes", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_reflectionlike_user")
+
+  @@unique([reflection_id, user_id], map: "reflection_likes_unique")
+  @@map("reflection_likes")
+}
+
+model Journal {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id    String    @db.Uuid
+  title      String
+  content    String
+  mood       String?
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
+  user       User      @relation("UserJournals", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_journal_user")
+
+  @@map("journals")
+}
+
+model DevotionalGoal {
+  id                              String                            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title                           String
+  description                     String?
+  created_at                      DateTime?                         @default(now()) @db.Timestamptz(6)
+  devotional_daily_task_templates devotional_daily_task_templates[]
+  tasks                           DevotionalTask[]
+  users                           User[]                            @relation("UserDevotionalGoal")
+
+  @@map("devotional_goals")
+}
+
+model DevotionalTask {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  goal_id            String?            @db.Uuid
+  day_number         Int
+  task_text          String
+  created_at         DateTime?          @default(now()) @db.Timestamptz(6)
+  goal               DevotionalGoal?    @relation(fields: [goal_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_devotional_task_goal")
+  user_task_progress UserTaskProgress[]
+
+  @@map("devotional_tasks")
+}
+
+model UserTaskProgress {
+  id                 String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id            String?         @db.Uuid
+  devotional_task_id String?         @db.Uuid
+  completion_date    DateTime        @db.Date
+  completedAt        DateTime?       @default(now()) @map("completed_at") @db.Timestamptz(6)
+  createdAt          DateTime?       @default(now()) @map("created_at") @db.Timestamptz(6)
+  devotional_task    DevotionalTask? @relation(fields: [devotional_task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_task_progress_task")
+  users              User?           @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_task_progress_user")
+
+  @@unique([user_id, completion_date], map: "unique_user_completion_date")
+  @@map("user_task_progress")
+}
+
+model NicheTag {
+  id                  String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name                String               @unique @db.VarChar(100)
+  reflectionNicheTags ReflectionNicheTag[]
+
+  @@map("niche_tags")
+}
+
+model ReflectionNicheTag {
+  reflection_id String     @db.Uuid
+  niche_tag_id  String     @db.Uuid
+  nicheTag      NicheTag   @relation(fields: [niche_tag_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  reflection    Reflection @relation(fields: [reflection_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([reflection_id, niche_tag_id])
+  @@unique([niche_tag_id, reflection_id], map: "unique_niche_reflection_pair")
+  @@map("reflection_niche_tags")
+}
+
+model DailyTask {
+  id           String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String                @db.Uuid
+  title        String
+  description  String?
+  created_at   DateTime?             @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime?             @default(now()) @db.Timestamptz(6)
+  is_recurring Boolean?              @default(false)
+  ai_generated Boolean?              @default(false)
+  completions  DailyTaskCompletion[]
+  user         User                  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_daily_task_user")
+
+  @@map("daily_tasks")
+}
+
+model DailyTaskCompletion {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  task_id         String    @db.Uuid
+  user_id         String    @db.Uuid
+  completion_date DateTime  @db.Date
+  created_at      DateTime? @default(now()) @db.Timestamptz(6)
+  task            DailyTask @relation(fields: [task_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_daily_task_completion_task")
+  user            User      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_daily_task_completion_user")
+
+  @@unique([task_id, completion_date], map: "unique_task_completion_date")
+  @@map("daily_task_completions")
+}
+
+model devotional_daily_task_templates {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  devotional_id    String         @db.Uuid
+  title            String
+  description      String?
+  is_recurring     Boolean?       @default(false)
+  created_at       DateTime?      @default(now()) @db.Timestamptz(6)
+  devotional_goals DevotionalGoal @relation(fields: [devotional_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model good_news {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title      String
+  content    String
+  image_url  String?
+  date       DateTime  @default(dbgenerated("CURRENT_DATE")) @db.Date
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model AiPlan {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String            @db.Uuid
+  title       String
+  description String?
+  created_at  DateTime?         @default(now()) @db.Timestamptz(6)
+  dailyTasks  AiPlanDailyTask[] @relation("AiPlanDailyTasks")
+  tasks       AiPlanTask[]      @relation("AiPlanTasks")
+  user        User              @relation("UserAiPlans", fields: [user_id], references: [id])
+
+  @@map("ai_plans")
+}
+
+model AiPlanTask {
+  id         String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ai_plan_id String               @db.Uuid
+  day_number Int
+  task_text  String
+  created_at DateTime?            @default(now()) @db.Timestamptz(6)
+  ai_plan    AiPlan               @relation("AiPlanTasks", fields: [ai_plan_id], references: [id])
+  progress   UserAiTaskProgress[]
+
+  @@map("ai_plan_tasks")
+}
+
+model UserAiTaskProgress {
+  id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id         String     @db.Uuid
+  ai_plan_task_id String     @db.Uuid
+  completed_at    DateTime?  @default(now()) @db.Timestamptz(6)
+  ai_plan_task    AiPlanTask @relation(fields: [ai_plan_task_id], references: [id])
+  user            User       @relation("UserAiTaskProgresses", fields: [user_id], references: [id])
+
+  @@unique([user_id, ai_plan_task_id], map: "unique_user_ai_task")
+  @@map("user_ai_task_progress")
+}
+
+model AiPlanDailyTask {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  text      String
+  completed Boolean @default(false)
+  planId    String  @db.Uuid
+  aiPlan    AiPlan  @relation("AiPlanDailyTasks", fields: [planId], references: [id], onDelete: Cascade)
+
+  @@map("ai_plan_daily_tasks")
+}

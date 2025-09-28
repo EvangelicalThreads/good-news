@@ -1,0 +1,31 @@
+/* layout.css */
+
+.layoutBody {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f0ff 0%, #ffffff 100%);
+  padding-bottom: 4rem; /* space for bottom nav */
+  font-family: var(--font-geist-sans), sans-serif;
+  color: var(--foreground);
+  display: flex;
+  flex-direction: column;
+}
+
+.layoutHeader {
+  position: sticky;
+  top: 0;
+  background: white;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  display: flex;
+  justify-content: flex-end;
+  z-index: 50;
+}
+
+.layoutMain {
+  flex-grow: 1;
+  padding: 1rem 1.25rem 0 1.25rem;
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
